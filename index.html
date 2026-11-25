@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RAG vs No-RAG — Meghana Gandhi</title>
+<style>
+  :root {
+    --bg: #bfdbfe;        
+    --card: #ffffff;      
+    --text: #0f172a;      
+    --muted: #475569;     
+    --accent: #2563eb;    
+    --border: #93c5fd;    
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  header { text-align: center; margin-bottom: 40px; }
+  header h1 { font-size: 2.2rem; margin: 0 0 12px; color: #0f172a; }
+  header p { color: #334155; margin: 0; font-size: 1.1rem; }
+
+  .prompt-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+  .prompt-box .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .prompt-box .question { font-size: 1.2rem; font-weight: 500; }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: stretch;
+  }
+  @media (max-width: 900px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
+  
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .card-head.bad {
+    background-color: #f1f5f9; 
+    color: #334155;            
+    border-top: 4px solid #94a3b8; 
+  }
+  
+  .card-head.good {
+    background-color: #ecfdf5; 
+    color: #065f46;            
+    border-top: 4px solid #10b981;
+  }
+
+  .tag {
+    margin-left: auto;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  
+  .tag.warning { background: #e2e8f0; color: #475569; border: 1px solid #cbd5e1; }
+  .tag.good { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+
+  .callout {
+    padding: 16px 24px;
+    font-family: "Georgia", serif; 
+    font-style: italic;
+    font-size: 1.15rem; 
+    line-height: 1.5;
+    border-left: 4px solid;
+    background: #f8fafc;
+  }
+  
+  .callout.bad { border-left-color: #94a3b8; color: #334155; }
+  .callout.good { border-left-color: #10b981; color: #065f46; }
+
+  .callout strong {
+    font-family: system-ui, sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    color: #475569;
+  }
+
+  .check-below {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: system-ui, sans-serif;
+    font-style: normal;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-top: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.05); 
+    color: #ea580c; 
+  }
+
+  /* --- UNIFIED IMAGE FRAMES WITH THICK BORDERS --- */
+  .shot {
+    background: #e2e8f0; 
+    padding: 24px; 
+    flex-grow: 1;
+    display: flex;
+    align-items: center; 
+    justify-content: center;
+    border-bottom: 1px solid var(--border);
+    position: relative; 
+    overflow: hidden; /* Prevents scaled image from overflowing */
+  }
+  
+  .shot img { 
+    width: 100%; 
+    height: auto; 
+    display: block; 
+    border-radius: 8px;
+    border: 4px solid #64748b; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+    background-color: #ffffff;
+    transition: transform 0.3s ease;
+  }
+
+  /* --- SCALE THE 2ND IMAGE TO MATCH --- */
+  .card:last-child .shot img {
+    transform: scale(1.15); 
+  }
+
+  /* --- HIGHLIGHT OVERLAY (LEFT IMAGE ONLY) --- */
+  .highlight-box {
+    position: absolute;
+    top: 38.5%; 
+    left: 41.5%;
+    width: 45.5%;
+    height: 6.5%; 
+    
+    background-color: rgba(250, 204, 21, 0.45); 
+    border-radius: 2px;
+    filter: blur(0.5px); 
+    pointer-events: none;
+    mix-blend-mode: multiply; 
+  }
+
+  .note {
+    padding: 20px 24px;
+    font-size: 0.95rem;
+    color: var(--muted);
+    background: #ffffff;
+    flex-grow: 1; 
+  }
+  .note strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    color: #334155;
+    font-size: 0.9rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>LLM Alone vs. LLM + RAG</h1>
+      <p>A side-by-side demo comparing an LLM's response without external data vs. with Retrieval-Augmented Generation.</p>
+    </header>
+
+    <div class="prompt-box">
+      <div class="label">Prompt / Question</div>
+      <div class="question">“What about August 26 2026 flood in Nepal?”</div>
+    </div>
+
+    <div class="compare">
+      <!-- WITHOUT RAG -->
+      <article class="card">
+        <div class="card-head bad">
+          <span class="dot warning" style="background: #94a3b8;"></span>
+          Without RAG
+          <span class="tag warning">Base LLM</span>
+        </div>
+        
+        <div class="callout bad">
+          <strong>Model Response:</strong>
+          "The flooding event in Nepal on August 26, 2026, is a hypothetical event as my knowledge cutoff is March 1, 2023..."
+          <span class="check-below">
+            Check the below screenshot depicts the concept ↓
+          </span>
+        </div>
+        
+        <div class="shot">
+          <img src="no-rag.jpg" alt="Chatbot answering without RAG" />
+          <div class="highlight-box"></div>
+        </div>
+        <div class="note">
+          <strong>Why it lacks detail:</strong> The model relies entirely on its pre-trained knowledge. It correctly acknowledges its limitation regarding future events, but can only provide a generalized answer rather than specific facts about the 2026 event.
+        </div>
+      </article>
+
+      <!-- WITH RAG -->
+      <article class="card">
+        <div class="card-head good">
+          <span class="dot good"></span>
+          With RAG
+          <span class="tag good">Grounded</span>
+        </div>
+        
+        <div class="callout good">
+          <strong>Model Response:</strong>
+          "The 26th August 2026 flood in Nepal was a devastating flash flood event that struck the country, particularly the Rasuwa and Nuwakot districts along the Trishuli River..."
+          <span class="check-below">
+            Check the below screenshot depicts the concept ↓
+          </span>
+        </div>
+        
+        <div class="shot">
+          <img src="with-rag.jpg" alt="Chatbot answering accurately with RAG" />
+        </div>
+        <div class="note">
+          <strong>Why it works:</strong> The RAG pipeline retrieves relevant, up-to-date documents and injects them into the context window. The model successfully cites specific details like the Rasuwa and Nuwakot districts, the Trishuli River, and the exact death toll.
+        </div>
+      </article>
+    </div>
+
+    <footer>
+      Demo by <a href="#">Meghana Gandhi</a> · Built with a custom RAG pipeline
+    </footer>
+  </div>
+</body>
+</html>
